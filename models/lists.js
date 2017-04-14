@@ -6,13 +6,24 @@ Lists.attachSchema(new SimpleSchema({
   },
   archived: {
     type: Boolean,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert && !this.isSet) {
+        return false;
+      }
+    },
   },
   boardId: {
     type: String,
   },
   createdAt: {
     type: Date,
-    denyUpdate: true,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert) {
+        return new Date();
+      } else {
+        this.unset();
+      }
+    },
   },
   sort: {
     type: Number,
@@ -22,20 +33,26 @@ Lists.attachSchema(new SimpleSchema({
   },
   updatedAt: {
     type: Date,
-    denyInsert: true,
     optional: true,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isUpdate) {
+        return new Date();
+      } else {
+        this.unset();
+      }
+    },
   },
 }));
 
 Lists.allow({
   insert(userId, doc) {
-    return allowIsBoardMember(userId, Boards.findOne(doc.boardId));
+    return allowIsBoardMemberNonComment(userId, Boards.findOne(doc.boardId));
   },
   update(userId, doc) {
-    return allowIsBoardMember(userId, Boards.findOne(doc.boardId));
+    return allowIsBoardMemberNonComment(userId, Boards.findOne(doc.boardId));
   },
   remove(userId, doc) {
-    return allowIsBoardMember(userId, Boards.findOne(doc.boardId));
+    return allowIsBoardMemberNonComment(userId, Boards.findOne(doc.boardId));
   },
   fetch: ['boardId'],
 });
@@ -73,19 +90,11 @@ Lists.mutations({
 
 Lists.hookOptions.after.update = { fetchPrevious: false };
 
-Lists.before.insert((userId, doc) => {
-  doc.createdAt = new Date();
-  doc.archived = false;
-  if (!doc.userId)
-    doc.userId = userId;
-});
-
-Lists.before.update((userId, doc, fieldNames, modifier) => {
-  modifier.$set = modifier.$set || {};
-  modifier.$set.modifiedAt = new Date();
-});
-
 if (Meteor.isServer) {
+  Meteor.startup(() => {
+    Lists._collection._ensureIndex({ boardId: 1 });
+  });
+
   Lists.after.insert((userId, doc) => {
     Activities.insert({
       userId,
@@ -93,6 +102,17 @@ if (Meteor.isServer) {
       activityType: 'createList',
       boardId: doc.boardId,
       listId: doc._id,
+    });
+  });
+
+  Lists.before.remove((userId, doc) => {
+    Activities.insert({
+      userId,
+      type: 'list',
+      activityType: 'removeList',
+      boardId: doc.boardId,
+      listId: doc._id,
+      title: doc.title,
     });
   });
 

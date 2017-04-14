@@ -1,15 +1,14 @@
 BlazeComponent.extendComponent({
-  template() {
-    return 'cardDetails';
-  },
-
   mixins() {
     return [Mixins.InfiniteScrolling, Mixins.PerfectScrollbar];
   },
 
   calculateNextPeak() {
-    const altitude = this.find('.js-card-details').scrollHeight;
-    this.callFirstWith(this, 'setNextPeak', altitude);
+    const cardElement = this.find('.js-card-details');
+    if (cardElement) {
+      const altitude = cardElement.scrollHeight;
+      this.callFirstWith(this, 'setNextPeak', altitude);
+    }
   },
 
   reachNextPeak() {
@@ -21,6 +20,16 @@ BlazeComponent.extendComponent({
     this.isLoaded = new ReactiveVar(false);
     this.parentComponent().showOverlay.set(true);
     this.parentComponent().mouseHasEnterCardDetails = false;
+    this.calculateNextPeak();
+  },
+
+  isWatching() {
+    const card = this.currentData();
+    return card.findWatcher(Meteor.userId());
+  },
+
+  canModifyCard() {
+    return Meteor.user() && Meteor.user().isBoardMember() && !Meteor.user().isCommentOnly();
   },
 
   scrollParentContainer() {
@@ -57,6 +66,9 @@ BlazeComponent.extendComponent({
 
   events() {
     const events = {
+      [`${CSSEvents.transitionend} .js-card-details`]() {
+        this.isLoaded.set(true);
+      },
       [`${CSSEvents.animationend} .js-card-details`]() {
         this.isLoaded.set(true);
       },
@@ -111,7 +123,7 @@ BlazeComponent.extendComponent({
         UnsavedEdits.set(this._getUnsavedEditKey(), this.getValue());
       }
     }
-    super();
+    super.close();
   }
 
   reset() {
@@ -128,17 +140,46 @@ BlazeComponent.extendComponent({
   }
 }).register('inlinedCardDescription');
 
+Template.cardDetailsActionsPopup.helpers({
+  isWatching() {
+    return this.findWatcher(Meteor.userId());
+  },
+
+  canModifyCard() {
+    return Meteor.user() && Meteor.user().isBoardMember() && !Meteor.user().isCommentOnly();
+  },
+});
+
 Template.cardDetailsActionsPopup.events({
   'click .js-members': Popup.open('cardMembers'),
   'click .js-labels': Popup.open('cardLabels'),
   'click .js-attachments': Popup.open('cardAttachments'),
+  'click .js-start-date': Popup.open('editCardStartDate'),
+  'click .js-due-date': Popup.open('editCardDueDate'),
   'click .js-move-card': Popup.open('moveCard'),
+  'click .js-move-card-to-top'(evt) {
+    evt.preventDefault();
+    const minOrder = _.min(this.list().cards().map((c) => c.sort));
+    this.move(this.listId, minOrder - 1);
+  },
+  'click .js-move-card-to-bottom'(evt) {
+    evt.preventDefault();
+    const maxOrder = _.max(this.list().cards().map((c) => c.sort));
+    this.move(this.listId, maxOrder + 1);
+  },
   'click .js-archive'(evt) {
     evt.preventDefault();
     this.archive();
     Popup.close();
   },
   'click .js-more': Popup.open('cardMore'),
+  'click .js-toggle-watch-card'() {
+    const currentCard = this;
+    const level = currentCard.findWatcher(Meteor.userId()) ? null : 'watching';
+    Meteor.call('watch', 'card', currentCard._id, level, (err, ret) => {
+      if (!err && ret) Popup.close();
+    });
+  },
 });
 
 Template.editCardTitleForm.onRendered(function() {

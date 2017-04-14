@@ -79,6 +79,46 @@ FlowRouter.route('/shortcuts', {
   },
 });
 
+FlowRouter.route('/import', {
+  name: 'import',
+  triggersEnter: [
+    AccountsTemplates.ensureSignedIn,
+    () => {
+      Session.set('currentBoard', null);
+      Session.set('currentCard', null);
+
+      Filter.reset();
+      EscapeActions.executeAll();
+    },
+  ],
+  action() {
+    BlazeLayout.render('defaultLayout', {
+      headerBar: 'importHeaderBar',
+      content: 'import',
+    });
+  },
+});
+
+FlowRouter.route('/setting', {
+  name: 'setting',
+  triggersEnter: [
+    AccountsTemplates.ensureSignedIn,
+    () => {
+      Session.set('currentBoard', null);
+      Session.set('currentCard', null);
+
+      Filter.reset();
+      EscapeActions.executeAll();
+    },
+  ],
+  action() {
+    BlazeLayout.render('defaultLayout', {
+      headerBar: 'settingHeaderBar',
+      content: 'setting',
+    });
+  },
+});
+
 FlowRouter.notFound = {
   action() {
     BlazeLayout.render('defaultLayout', { content: 'notFound' });

@@ -6,25 +6,77 @@ Boards.attachSchema(new SimpleSchema({
   },
   slug: {
     type: String,
+    autoValue() { // eslint-disable-line consistent-return
+      // XXX We need to improve slug management. Only the id should be necessary
+      // to identify a board in the code.
+      // XXX If the board title is updated, the slug should also be updated.
+      // In some cases (Chinese and Japanese for instance) the `getSlug` function
+      // return an empty string. This is causes bugs in our application so we set
+      // a default slug in this case.
+      if (this.isInsert && !this.isSet) {
+        let slug = 'board';
+        const title = this.field('title');
+        if (title.isSet) {
+          slug = getSlug(title.value) || slug;
+        }
+        return slug;
+      }
+    },
   },
   archived: {
     type: Boolean,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert && !this.isSet) {
+        return false;
+      }
+    },
   },
   createdAt: {
     type: Date,
-    denyUpdate: true,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert) {
+        return new Date();
+      } else {
+        this.unset();
+      }
+    },
   },
   // XXX Inconsistent field naming
   modifiedAt: {
     type: Date,
-    denyInsert: true,
     optional: true,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isUpdate) {
+        return new Date();
+      } else {
+        this.unset();
+      }
+    },
   },
   // De-normalized number of users that have starred this board
   stars: {
     type: Number,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert) {
+        return 0;
+      }
+    },
   },
   // De-normalized label system
+  'labels': {
+    type: [Object],
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert && !this.isSet) {
+        const colors = Boards.simpleSchema()._schema['labels.$.color'].allowedValues;
+        const defaultLabelsColors = _.clone(colors).splice(0, 6);
+        return defaultLabelsColors.map((color) => ({
+          color,
+          _id: Random.id(6),
+          name: '',
+        }));
+      }
+    },
+  },
   'labels.$._id': {
     // We don't specify that this field must be unique in the board because that
     // will cause performance penalties and is not necessary since this field is
@@ -47,6 +99,19 @@ Boards.attachSchema(new SimpleSchema({
   // XXX We might want to maintain more informations under the member sub-
   // documents like de-normalized meta-data (the date the member joined the
   // board, the number of contributions, etc.).
+  'members': {
+    type: [Object],
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert && !this.isSet) {
+        return [{
+          userId: this.userId,
+          isAdmin: true,
+          isActive: true,
+          isCommentOnly: false,
+        }];
+      }
+    },
+  },
   'members.$.userId': {
     type: String,
   },
@@ -54,6 +119,9 @@ Boards.attachSchema(new SimpleSchema({
     type: Boolean,
   },
   'members.$.isActive': {
+    type: Boolean,
+  },
+  'members.$.isCommentOnly': {
     type: Boolean,
   },
   permission: {
@@ -70,6 +138,11 @@ Boards.attachSchema(new SimpleSchema({
       'wisteria',
       'midnight',
     ],
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert && !this.isSet) {
+        return Boards.simpleSchema()._schema.color.allowedValues[0];
+      }
+    },
   },
   description: {
     type: String,
@@ -150,8 +223,12 @@ Boards.helpers({
     return !!_.findWhere(this.members, {userId: memberId, isActive: true, isAdmin: true});
   },
 
+  hasCommentOnly(memberId) {
+    return !!_.findWhere(this.members, {userId: memberId, isActive: true, isAdmin: false, isCommentOnly: true});
+  },
+
   absoluteUrl() {
-    return FlowRouter.path('board', { id: this._id, slug: this.slug });
+    return FlowRouter.url('board', { id: this._id, slug: this.slug });
   },
 
   colorClass() {
@@ -180,7 +257,7 @@ Boards.mutations({
     return { $set: { title }};
   },
 
-  setDesciption(description) {
+  setDescription(description) {
     return { $set: {description} };
   },
 
@@ -201,6 +278,7 @@ Boards.mutations({
       const _id = Random.id(6);
       return { $push: {labels: { _id, name, color }}};
     }
+    return {};
   },
 
   editLabel(labelId, name, color) {
@@ -213,6 +291,7 @@ Boards.mutations({
         },
       };
     }
+    return {};
   },
 
   removeLabel(labelId) {
@@ -235,6 +314,7 @@ Boards.mutations({
           userId: memberId,
           isAdmin: false,
           isActive: true,
+          isCommentOnly: false,
         },
       },
     };
@@ -261,7 +341,7 @@ Boards.mutations({
     };
   },
 
-  setMemberPermission(memberId, isAdmin) {
+  setMemberPermission(memberId, isAdmin, isCommentOnly) {
     const memberIndex = this.memberIndex(memberId);
 
     // do not allow change permission of self
@@ -272,6 +352,7 @@ Boards.mutations({
     return {
       $set: {
         [`members.${memberIndex}.isAdmin`]: isAdmin,
+        [`members.${memberIndex}.isCommentOnly`]: isCommentOnly,
       },
     };
   },
@@ -336,41 +417,6 @@ if (Meteor.isServer) {
   });
 }
 
-Boards.before.insert((userId, doc) => {
-  // XXX We need to improve slug management. Only the id should be necessary
-  // to identify a board in the code.
-  // XXX If the board title is updated, the slug should also be updated.
-  // In some cases (Chinese and Japanese for instance) the `getSlug` function
-  // return an empty string. This is causes bugs in our application so we set
-  // a default slug in this case.
-  doc.slug = doc.slug || getSlug(doc.title) || 'board';
-  doc.createdAt = new Date();
-  doc.archived = false;
-  doc.members = doc.members || [{
-    userId,
-    isAdmin: true,
-    isActive: true,
-  }];
-  doc.stars = 0;
-  doc.color = Boards.simpleSchema()._schema.color.allowedValues[0];
-
-  // Handle labels
-  const colors = Boards.simpleSchema()._schema['labels.$.color'].allowedValues;
-  const defaultLabelsColors = _.clone(colors).splice(0, 6);
-  doc.labels = defaultLabelsColors.map((color) => {
-    return {
-      color,
-      _id: Random.id(6),
-      name: '',
-    };
-  });
-});
-
-Boards.before.update((userId, doc, fieldNames, modifier) => {
-  modifier.$set = modifier.$set || {};
-  modifier.$set.modifiedAt = new Date();
-});
-
 if (Meteor.isServer) {
   // Let MongoDB ensure that a member is not included twice in the same board
   Meteor.startup(() => {
@@ -378,6 +424,7 @@ if (Meteor.isServer) {
       _id: 1,
       'members.userId': 1,
     }, { unique: true });
+    Boards._collection._ensureIndex({'members.userId': 1});
   });
 
   // Genesis: the first activity of the newly created board
@@ -397,8 +444,9 @@ if (Meteor.isServer) {
     if (!_.contains(fieldNames, 'labels') ||
       !modifier.$pull ||
       !modifier.$pull.labels ||
-      !modifier.$pull.labels._id)
+      !modifier.$pull.labels._id) {
       return;
+    }
 
     const removedLabelId = modifier.$pull.labels._id;
     Cards.update(
@@ -412,16 +460,76 @@ if (Meteor.isServer) {
     );
   });
 
+  const foreachRemovedMember = (doc, modifier, callback) => {
+    Object.keys(modifier).forEach((set) => {
+      if (modifier[set] !== false) {
+        return;
+      }
+
+      const parts = set.split('.');
+      if (parts.length === 3 && parts[0] === 'members' && parts[2] === 'isActive') {
+        callback(doc.members[parts[1]].userId);
+      }
+    });
+  };
+
+  // Remove a member from all objects of the board before leaving the board
+  Boards.before.update((userId, doc, fieldNames, modifier) => {
+    if (!_.contains(fieldNames, 'members')) {
+      return;
+    }
+
+    if (modifier.$set) {
+      const boardId = doc._id;
+      foreachRemovedMember(doc, modifier.$set, (memberId) => {
+        Cards.update(
+          { boardId },
+          {
+            $pull: {
+              members: memberId,
+              watchers: memberId,
+            },
+          },
+          { multi: true }
+        );
+
+        Lists.update(
+          { boardId },
+          {
+            $pull: {
+              watchers: memberId,
+            },
+          },
+          { multi: true }
+        );
+
+        const board = Boards._transform(doc);
+        board.setWatcher(memberId, false);
+
+        // Remove board from users starred list
+        if (!board.isPublic()) {
+          Users.update(
+            memberId,
+            {
+              $pull: {
+                'profile.starredBoards': boardId,
+              },
+            }
+          );
+        }
+      });
+    }
+  });
+
   // Add a new activity if we add or remove a member to the board
   Boards.after.update((userId, doc, fieldNames, modifier) => {
-    if (!_.contains(fieldNames, 'members'))
+    if (!_.contains(fieldNames, 'members')) {
       return;
-
-    let memberId;
+    }
 
     // Say hello to the new member
     if (modifier.$push && modifier.$push.members) {
-      memberId = modifier.$push.members.userId;
+      const memberId = modifier.$push.members.userId;
       Activities.insert({
         userId,
         memberId,
@@ -432,14 +540,15 @@ if (Meteor.isServer) {
     }
 
     // Say goodbye to the former member
-    if (modifier.$pull && modifier.$pull.members) {
-      memberId = modifier.$pull.members.userId;
-      Activities.insert({
-        userId,
-        memberId,
-        type: 'member',
-        activityType: 'removeBoardMember',
-        boardId: doc._id,
+    if (modifier.$set) {
+      foreachRemovedMember(doc, modifier.$set, (memberId) => {
+        Activities.insert({
+          userId,
+          memberId,
+          type: 'member',
+          activityType: 'removeBoardMember',
+          boardId: doc._id,
+        });
       });
     }
   });
