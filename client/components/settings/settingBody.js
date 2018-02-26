@@ -1,12 +1,16 @@
-Meteor.subscribe('setting');
-Meteor.subscribe('mailServer');
-
 BlazeComponent.extendComponent({
   onCreated() {
     this.error = new ReactiveVar('');
     this.loading = new ReactiveVar(false);
     this.generalSetting = new ReactiveVar(true);
     this.emailSetting = new ReactiveVar(false);
+    this.accountSetting = new ReactiveVar(false);
+    this.announcementSetting = new ReactiveVar(false);
+
+    Meteor.subscribe('setting');
+    Meteor.subscribe('mailServer');
+    Meteor.subscribe('accountSettings');
+    Meteor.subscribe('announcements');
   },
 
   setError(error) {
@@ -62,6 +66,8 @@ BlazeComponent.extendComponent({
       const targetID = target.data('id');
       this.generalSetting.set('registration-setting' === targetID);
       this.emailSetting.set('email-setting' === targetID);
+      this.accountSetting.set('account-setting' === targetID);
+      this.announcementSetting.set('announcement-setting' === targetID);
     }
   },
 
@@ -110,13 +116,28 @@ BlazeComponent.extendComponent({
       const from = this.checkField('#mail-server-from');
       const tls = $('#mail-server-tls.is-checked').length > 0;
       Settings.update(Settings.findOne()._id, {$set:{'mailServer.host':host, 'mailServer.port': port, 'mailServer.username': username,
-          'mailServer.password': password, 'mailServer.enableTLS': tls, 'mailServer.from': from}});
+        'mailServer.password': password, 'mailServer.enableTLS': tls, 'mailServer.from': from}});
     } catch (e) {
       return;
     } finally {
       this.setLoading(false);
     }
 
+  },
+
+  sendSMTPTestEmail() {
+    Meteor.call('sendSMTPTestEmail', (err, ret) => {
+      if (!err && ret) { /* eslint-disable no-console */
+        const message = `${TAPi18n.__(ret.message)}: ${ret.email}`;
+        console.log(message);
+        alert(message);
+      } else {
+        const reason = err.reason || '';
+        const message = `${TAPi18n.__(err.error)}\n${reason}`;
+        console.log(message, err);
+        alert(message);
+      }  /* eslint-enable no-console */
+    });
   },
 
   events(){
@@ -127,6 +148,68 @@ BlazeComponent.extendComponent({
       'click a.js-toggle-board-choose': this.checkBoard,
       'click button.js-email-invite': this.inviteThroughEmail,
       'click button.js-save': this.saveMailServerInfo,
+      'click button.js-send-smtp-test-email': this.sendSMTPTestEmail,
     }];
   },
 }).register('setting');
+
+BlazeComponent.extendComponent({
+  saveAllowEmailChange() {
+    const allowEmailChange = ($('input[name=allowEmailChange]:checked').val() === 'true');
+    AccountSettings.update('accounts-allowEmailChange', {
+      $set: { 'booleanValue': allowEmailChange },
+    });
+  },
+
+  allowEmailChange() {
+    return AccountSettings.findOne('accounts-allowEmailChange').booleanValue;
+  },
+
+  events() {
+    return [{
+      'click button.js-accounts-save': this.saveAllowEmailChange,
+    }];
+  },
+}).register('accountSettings');
+
+BlazeComponent.extendComponent({
+  onCreated() {
+    this.loading = new ReactiveVar(false);
+  },
+
+  setLoading(w) {
+    this.loading.set(w);
+  },
+
+  currentSetting(){
+    return Announcements.findOne();
+  },
+
+  saveMessage() {
+    const message = $('#admin-announcement').val().trim();
+    Announcements.update(Announcements.findOne()._id, {
+      $set: { 'body': message },
+    });
+  },
+
+  toggleActive(){
+    this.setLoading(true);
+    const isActive = this.currentSetting().enabled;
+    Announcements.update(Announcements.findOne()._id, {
+      $set:{ 'enabled': !isActive},
+    });
+    this.setLoading(false);
+    if(isActive){
+      $('.admin-announcement').slideUp();
+    }else{
+      $('.admin-announcement').slideDown();
+    }
+  },
+
+  events() {
+    return [{
+      'click a.js-toggle-activemessage': this.toggleActive,
+      'click button.js-announcement-save': this.saveMessage,
+    }];
+  },
+}).register('announcementSettings');

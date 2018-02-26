@@ -6,7 +6,11 @@ Mousetrap.bind('?', () => {
 });
 
 Mousetrap.bind('w', () => {
-  Sidebar.toggle();
+  if (Sidebar.isOpen() && Sidebar.getView() === 'home') {
+    Sidebar.toggle();
+  } else {
+    Sidebar.setView();
+  }
 });
 
 Mousetrap.bind('q', () => {
@@ -86,9 +90,6 @@ Template.keyboardShortcuts.helpers({
   }, {
     keys: ['@'],
     action: 'shortcut-autocomplete-members',
-  }, {
-    keys: [':'],
-    action: 'shortcut-autocomplete-emoji',
   }, {
     keys: ['SPACE'],
     action: 'shortcut-assign-self',

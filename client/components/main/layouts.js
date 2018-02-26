@@ -1,7 +1,3 @@
-Meteor.subscribe('boards');
-Meteor.subscribe('setting');
-Meteor.subscribe('user-admin');
-
 BlazeLayout.setRoot('body');
 
 const i18nTagToT9n = (i18nTag) => {
@@ -20,9 +16,21 @@ Template.userFormsLayout.onRendered(() => {
 
 Template.userFormsLayout.helpers({
   languages() {
-    return _.map(TAPi18n.getLanguages(), (lang, tag) => {
-      const name = lang.name;
+    return _.map(TAPi18n.getLanguages(), (lang, code) => {
+      const tag = code;
+      let name = lang.name;
+      if (lang.name === 'br') {
+        name = 'Brezhoneg';
+      } else if (lang.name === 'ig') {
+        name = 'Igbo';
+      }
       return { tag, name };
+    }).sort(function(a, b) {
+      if (a.name === b.name) {
+        return 0;
+      } else {
+        return a.name > b.name ? 1 : -1;
+      }
     });
   },
 

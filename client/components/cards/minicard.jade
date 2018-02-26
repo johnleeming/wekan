@@ -1,19 +1,25 @@
 template(name="minicard")
   .minicard
     if cover
-      .minicard-cover(style="background-image: url('{{pathFor cover.url}}');")
+      .minicard-cover(style="background-image: url('{{cover.url}}');")
     if labels
       .minicard-labels
         each labels
           .minicard-label(class="card-label-{{color}}" title="{{name}}")
-    .minicard-title= title
+    .minicard-title
+      +viewer
+        = title
     .dates
       if startAt
-          .date
-            +minicardStartDate
+        .date
+          +minicardStartDate
       if dueAt
-          .date
-            +minicardDueDate
+        .date
+          +minicardDueDate
+      if spentTime
+        .date
+          +cardSpentTime
+
     if members
       .minicard-members.js-minicard-members
         each members

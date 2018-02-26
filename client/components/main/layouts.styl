@@ -270,11 +270,6 @@ kbd
 .grabbing
   cursor: grabbing
 
-.emoji
-  height: 18px
-  width: 18px
-  vertical-align: text-bottom
-
 // Implement a thiner close icon as suggested in
 // https://github.com/FortAwesome/Font-Awesome/issues/1540#issuecomment-68689950
 .fa.fa-times-thin:before
@@ -335,6 +330,8 @@ a
   margin-left: 38px
 
 .viewer
+  min-height: 18px
+
   ol
     list-style-type: decimal
     padding-left: 20px
@@ -366,7 +363,8 @@ a
 
 @keyframes flexGrowIn
   from
-    flex-basis: 0
+    // Support IE11 https://github.com/wekan/wekan/pull/646
+    height: 100%
 
 @media screen and (max-width: 800px)
   #content

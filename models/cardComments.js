@@ -56,6 +56,16 @@ CardComments.helpers({
 
 CardComments.hookOptions.after.update = { fetchPrevious: false };
 
+function commentCreation(userId, doc){
+  Activities.insert({
+    userId,
+    activityType: 'addComment',
+    boardId: doc.boardId,
+    cardId: doc.cardId,
+    commentId: doc._id,
+  });
+}
+
 if (Meteor.isServer) {
   // Comments are often fetched within a card, so we create an index to make these
   // queries more efficient.
@@ -64,19 +74,111 @@ if (Meteor.isServer) {
   });
 
   CardComments.after.insert((userId, doc) => {
-    Activities.insert({
-      userId,
-      activityType: 'addComment',
-      boardId: doc.boardId,
-      cardId: doc.cardId,
-      commentId: doc._id,
-    });
+    commentCreation(userId, doc);
   });
 
   CardComments.after.remove((userId, doc) => {
     const activity = Activities.findOne({ commentId: doc._id });
     if (activity) {
       Activities.remove(activity._id);
+    }
+  });
+}
+
+//CARD COMMENT REST API
+if (Meteor.isServer) {
+  JsonRoutes.add('GET', '/api/boards/:boardId/cards/:cardId/comments', function (req, res, next) {
+    try {
+      Authentication.checkUserId( req.userId);
+      const paramBoardId = req.params.boardId;
+      const paramCardId = req.params.cardId;
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: CardComments.find({ boardId: paramBoardId, cardId: paramCardId}).map(function (doc) {
+          return {
+            _id: doc._id,
+            comment: doc.text,
+            authorId: doc.userId,
+          };
+        }),
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
+  });
+
+  JsonRoutes.add('GET', '/api/boards/:boardId/cards/:cardId/comments/:commentId', function (req, res, next) {
+    try {
+      Authentication.checkUserId( req.userId);
+      const paramBoardId = req.params.boardId;
+      const paramCommentId = req.params.commentId;
+      const paramCardId = req.params.cardId;
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: CardComments.findOne({ _id: paramCommentId, cardId: paramCardId, boardId: paramBoardId }),
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
+  });
+
+  JsonRoutes.add('POST', '/api/boards/:boardId/cards/:cardId/comments', function (req, res, next) {
+    try {
+      Authentication.checkUserId( req.userId);
+      const paramBoardId = req.params.boardId;
+      const paramCardId = req.params.cardId;
+      const id = CardComments.direct.insert({
+        userId: req.body.authorId,
+        text: req.body.comment,
+        cardId: paramCardId,
+        boardId: paramBoardId,
+      });
+
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: {
+          _id: id,
+        },
+      });
+
+      const cardComment = CardComments.findOne({_id: id, cardId:paramCardId, boardId: paramBoardId });
+      commentCreation(req.body.authorId, cardComment);
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
+  });
+
+  JsonRoutes.add('DELETE', '/api/boards/:boardId/cards/:cardId/comments/:commentId', function (req, res, next) {
+    try {
+      Authentication.checkUserId( req.userId);
+      const paramBoardId = req.params.boardId;
+      const paramCommentId = req.params.commentId;
+      const paramCardId = req.params.cardId;
+      CardComments.remove({ _id: paramCommentId, cardId: paramCardId, boardId: paramBoardId });
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: {
+          _id: paramCardId,
+        },
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
     }
   });
 }

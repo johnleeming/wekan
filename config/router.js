@@ -8,6 +8,7 @@ FlowRouter.route('/', {
   triggersEnter: [AccountsTemplates.ensureSignedIn],
   action() {
     Session.set('currentBoard', null);
+    Session.set('currentList', null);
     Session.set('currentCard', null);
 
     Filter.reset();
@@ -31,6 +32,7 @@ FlowRouter.route('/b/:id/:slug', {
     // If we close a card, we'll execute again this route action but we don't
     // want to excape every current actions (filters, etc.)
     if (previousBoard !== currentBoard) {
+      Filter.reset();
       EscapeActions.executeAll();
     } else {
       EscapeActions.executeUpTo('popup-close');
@@ -79,19 +81,20 @@ FlowRouter.route('/shortcuts', {
   },
 });
 
-FlowRouter.route('/import', {
+FlowRouter.route('/import/:source', {
   name: 'import',
-  triggersEnter: [
-    AccountsTemplates.ensureSignedIn,
-    () => {
-      Session.set('currentBoard', null);
-      Session.set('currentCard', null);
+  triggersEnter: [AccountsTemplates.ensureSignedIn],
+  action(params) {
+    if (Session.get('currentBoard')) {
+      Session.set('fromBoard', Session.get('currentBoard'));
+    }
+    Session.set('currentBoard', null);
+    Session.set('currentList', null);
+    Session.set('currentCard', null);
+    Session.set('importSource', params.source);
 
-      Filter.reset();
-      EscapeActions.executeAll();
-    },
-  ],
-  action() {
+    Filter.reset();
+    EscapeActions.executeAll();
     BlazeLayout.render('defaultLayout', {
       headerBar: 'importHeaderBar',
       content: 'import',
@@ -105,6 +108,7 @@ FlowRouter.route('/setting', {
     AccountsTemplates.ensureSignedIn,
     () => {
       Session.set('currentBoard', null);
+      Session.set('currentList', null);
       Session.set('currentCard', null);
 
       Filter.reset();
@@ -115,6 +119,48 @@ FlowRouter.route('/setting', {
     BlazeLayout.render('defaultLayout', {
       headerBar: 'settingHeaderBar',
       content: 'setting',
+    });
+  },
+});
+
+FlowRouter.route('/information', {
+  name: 'information',
+  triggersEnter: [
+    AccountsTemplates.ensureSignedIn,
+    () => {
+      Session.set('currentBoard', null);
+      Session.set('currentList', null);
+      Session.set('currentCard', null);
+
+      Filter.reset();
+      EscapeActions.executeAll();
+    },
+  ],
+  action() {
+    BlazeLayout.render('defaultLayout', {
+      headerBar: 'settingHeaderBar',
+      content: 'information',
+    });
+  },
+});
+
+FlowRouter.route('/people', {
+  name: 'people',
+  triggersEnter: [
+    AccountsTemplates.ensureSignedIn,
+    () => {
+      Session.set('currentBoard', null);
+      Session.set('currentList', null);
+      Session.set('currentCard', null);
+
+      Filter.reset();
+      EscapeActions.executeAll();
+    },
+  ],
+  action() {
+    BlazeLayout.render('defaultLayout', {
+      headerBar: 'settingHeaderBar',
+      content: 'people',
     });
   },
 });
@@ -131,6 +177,7 @@ const redirections = {
   '/boards': '/',
   '/boards/:id/:slug': '/b/:id/:slug',
   '/boards/:id/:slug/:cardId': '/b/:id/:slug/:cardId',
+  '/import': '/import/trello',
 };
 
 _.each(redirections, (newPath, oldPath) => {
