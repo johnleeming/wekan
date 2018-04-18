@@ -1,3 +1,17 @@
+# v0.85 2018-04-18 Wekan release
+
+This release fixes the following bugs:
+
+- [Fix Switch List/swimlane view only working with admin privileges](https://github.com/wekan/wekan/issues/1567);
+- [Fix Wekan logo positioning](https://github.com/wekan/wekan/issues/1378);
+- [Fix checklists items migration error "title is required"](https://github.com/wekan/wekan/issues/1576);
+- [Removed paxctl alpine fix #1303 , because it did not work anymore, so Docker container
+   did not build correctly](https://github.com/wekan/wekan/commit/ce659632174ba25ca9b5e85b053fde02fd9c3928);
+- [Use curl to download 100% CPU fibers fixed node in snap, and remove paxctl from
+   snap package](https://github.com/wekan/wekan/commit/179ff7a12457be1592f04e1bdc15a5bb4fe9d398).
+
+Thanks to GitHub users andresmanelli, iwkse and xet7 for their contributions.
+
 # v0.84 2018-04-16 Wekan release
 
 This release adds the following new features:
