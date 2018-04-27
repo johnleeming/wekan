@@ -1,3 +1,33 @@
+# v0.88 2018-04-27 Wekan release
+
+This release fixes the following bugs:
+
+- [Fix Trello import of ChecklistItems](https://github.com/wekan/wekan/pull/1611).
+
+Thanks to Github user zebby76 for contributions.
+
+# v0.87 2018-04-27 Wekan release
+
+This release fixes the following bugs:
+
+- [Sandstorm: Copy Card, Move Card and Copy Checklist Template to Many Cards - No longer works in
+   menu](https://github.com/wekan/wekan/commit/db80e738048e2729917c5e8fc18cf8ee44df7992);
+- [Snap: Use override-build instead of old deprecated
+   prepare/build/install](https://github.com/wekan/wekan/commit/075ea1c43d827099e0030c750a4c156bd3340fed);
+- [Removed not-used plugins part of Caddy download
+   URL](https://github.com/wekan/wekan/commit/7b91b341fe9c0cde42f91bf14d228820653c883d).
+
+Thanks to GitHub users kyrofa and xet7 for their contributions.
+
+# v0.86 2018-04-20 Wekan release
+
+This release adds the following new features:
+
+- Updated translations: German and Turkish;
+- Updated Caddy to newest version for Snap.
+
+Thanks to translators and Caddy developers.
+
 # v0.85 2018-04-18 Wekan release
 
 This release fixes the following bugs:
