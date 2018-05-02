@@ -1,10 +1,44 @@
+# v0.92 2018-05-01 Wekan release
+
+This release tries to fix the following bugs, please test:
+
+* [Users who register with an invitation code can't see lists/cards](https://github.com/wekan/wekan/issues/1610).
+
+Thanks to GitHub user andresmanelli for contributions.
+
+# v0.91 2018-05-01 Wekan release
+
+This release fixes the following bugs:
+
+- [Fix Wekan Import / Export lists not being sortable](https://github.com/wekan/wekan/commit/539c1ab87a098a7ddfd23cdbd663441bd609b73d).
+
+Thanks to GitHub user zebby76 for contributions.
+
+# v0.90 2018-05-01 Wekan release
+
+This release adds the following new features:
+
+- [Remove space from between checklist items, so longer checklists can be seen
+   at once](https://github.com/wekan/wekan/commit/1124f4120cd77622c0a6313e228e1a00690ff566).
+
+Thanks to GitHub user xet7 for contributions.
+
+# v0.89 2018-04-29 Wekan release
+
+This release fixes the following bugs:
+
+- [Fix Wekan import / Export for
+   ChecklistItems](https://github.com/wekan/wekan/commit/30b17ff6c92df07922f875071e864cf688902293).
+
+Thanks to GitHub user zebby76 for contributions.
+
 # v0.88 2018-04-27 Wekan release
 
 This release fixes the following bugs:
 
 - [Fix Trello import of ChecklistItems](https://github.com/wekan/wekan/pull/1611).
 
-Thanks to Github user zebby76 for contributions.
+Thanks to GitHub user zebby76 for contributions.
 
 # v0.87 2018-04-27 Wekan release
 
