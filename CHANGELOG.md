@@ -1,3 +1,27 @@
+# v1.01 2018-05-23 Wekan release
+
+This release possibly fixes the following bugs, please test:
+
+* [Possible quickfix for all customFields Import errors, please test](https://github.com/wekan/wekan/pull/1653).
+
+Thanks to GitHub users feuerball11 and xet7 for their contributions.
+
+# v1.00 2018-05-21 Wekan release
+
+This release fixes the following bugs:
+
+* [Typo in English translation: brakets to brackets](https://github.com/wekan/wekan/issues/1647).
+
+Thanks to GitHub user yarons for contributions.
+
+# v0.99 2018-05-21 Wekan release
+
+This release adds the following new features:
+
+* [Advanced Filter for Custom Fields](https://github.com/wekan/wekan/pull/1646).
+
+Thanks to GitHub users feuerball11 and xet7 for their contributions.
+
 # v0.98 2018-05-19 Wekan release
 
 This release adds the following new features:
